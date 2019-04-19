@@ -2,14 +2,12 @@ package controller;
 
 import model.Item;
 import model.Order;
+import model.OrderInventory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import repository.ItemRepository;
 import repository.OrderRepository;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -27,7 +25,7 @@ public class OrderController {
         @Autowired
         private AtomicInteger atomicInteger;
 
-        @GetMapping(path = "/singleOrder")
+        @PostMapping(path = "/singleOrder")
         private @ResponseBody
         Integer singleOrder(@RequestBody final Order order){
             Integer orderId = atomicInteger.getAndIncrement()+1;
@@ -49,10 +47,10 @@ public class OrderController {
             return orderId;
         }
 
-    @GetMapping(path = "/bundleOrder")
+    @PostMapping(path = "/bundleOrder")
     private @ResponseBody
-    Integer bundleOrder(@RequestParam final Map<Integer,Integer> itemToQuantityMap,
-                    @RequestParam final String email){
+    Integer bundleOrder(@RequestBody final Map<Integer,Integer> itemToQuantityMap,
+                    @RequestBody final String email){
         final Integer orderId = atomicInteger.getAndIncrement();
         final List<Order> orders = itemToQuantityMap.entrySet()
                 .stream()
@@ -64,6 +62,8 @@ public class OrderController {
                                 .email(email)
                                 .build())
                 .collect(Collectors.toList());
+
+
         for(Order order: orders){
             Optional<Item> result= itemRepository.findById(order.getItemId());
             if(result.isPresent()) {
@@ -80,6 +80,24 @@ public class OrderController {
             }
         }
         return orderId;
+    }
+
+    @GetMapping("/getAll")
+    private Map<Integer,List<OrderInventory>> getAllOrders(){
+            Map<Integer,List<OrderInventory>> orderIdInventoriesList = new HashMap<>();
+            List<Order> orders = new ArrayList<>();
+            orderRepository.findAll().forEach(orders::add);
+            for(Order order: orders) {
+                orderIdInventoriesList.putIfAbsent(order.getOrderId(), new ArrayList<>());
+                Map<Integer,Integer> itemQuantityMap = new HashMap<>();
+                itemQuantityMap.put(order.getItemId(),order.getQuantity());
+                OrderInventory orderInventory = OrderInventory.builder()
+                                                              .email(order.getEmail())
+                                                              .itemToQuantityMap(itemQuantityMap)
+                                                              .build();
+                orderIdInventoriesList.get(order.getOrderId()).add(orderInventory);
+            }
+            return orderIdInventoriesList;
     }
 }
 

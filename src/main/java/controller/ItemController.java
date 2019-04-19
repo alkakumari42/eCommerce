@@ -3,13 +3,11 @@ package controller;
 import model.Item;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.HttpClientErrorException;
 import repository.ItemRepository;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @RestController
 @RequestMapping(path ="/item")
@@ -27,7 +25,7 @@ public class ItemController {
     @GetMapping(path = "/get")
     private @ResponseBody Item getItem(final Integer itemId){
         final Optional<Item> item = repository.findById(itemId);
-        return item.isPresent() ? item.get() : null;
+        return item.orElse(null);
     }
 
     @GetMapping(path = "/getAll")
